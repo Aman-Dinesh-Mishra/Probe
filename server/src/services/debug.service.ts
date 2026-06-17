@@ -13,13 +13,9 @@ export class DebugService {
     this.rag = new RagPipeline();
   }
 
-  /**
-   * Analyze a debugging request by combining RAG context with LLM analysis.
-   */
   async analyze(request: DebugRequest): Promise<DebugResult> {
     logger.info("[DebugService] Starting analysis");
 
-    // Step 1: Retrieve similar cases from Pinecone
     const ragContext = await this.rag.retrieve(
       request.errorPayload.message,
       request.codeSnippet,
@@ -32,8 +28,9 @@ export class DebugService {
       "[DebugService] Retrieved RAG context",
     );
 
-    // Step 2: Call DebugAgent with enriched input
     const result = await this.agent.analyze({
+      language: request.language ?? "typescript",
+
       parsedError: {
         message: request.errorPayload.message,
         name: request.errorPayload.name ?? "Error",
@@ -41,7 +38,9 @@ export class DebugService {
         isAsync: false,
         isTypeError: request.errorPayload.name === "TypeError",
       },
+
       context: ragContext,
+
       runtimeInfo: {
         asyncPatterns: [],
         unhandledRejections: [],
@@ -49,6 +48,7 @@ export class DebugService {
         memoryWarnings: [],
         errorLineContext: "",
       },
+
       originalCode: request.codeSnippet,
     });
 
@@ -60,7 +60,6 @@ export class DebugService {
       "[DebugService] Analysis complete",
     );
 
-    // Step 3: Store the case in Pinecone for future retrieval
     await this.rag.store({
       errorMsg: request.errorPayload.message,
       codeSnippet: request.codeSnippet,
