@@ -14,7 +14,21 @@ export function useDebug() {
     try {
       const response = await generateFix(payload);
 
-      setData(response.data || response);
+      const result = response.data || response;
+
+      setData(result);
+
+      const history = JSON.parse(localStorage.getItem("probe_history") || "[]");
+
+      history.unshift({
+        id: Date.now(),
+        language: payload.language,
+        code: payload.code,
+        errorLog: payload.errorLog || payload.error || "",
+        createdAt: new Date().toLocaleString(),
+      });
+
+      localStorage.setItem("probe_history", JSON.stringify(history));
     } catch (error) {
       console.error("[useDebug]", error);
     } finally {
@@ -22,5 +36,9 @@ export function useDebug() {
     }
   };
 
-  return { loading, data, analyzeAndFix };
+  return {
+    loading,
+    data,
+    analyzeAndFix,
+  };
 }
