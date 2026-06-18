@@ -14,12 +14,45 @@ export function useValidation() {
     try {
       const response = await validateFix(payload);
 
-      setResult(response.data || response);
+      const validationResult = response.data || response;
+
+      setResult(validationResult);
+
+      const validations = JSON.parse(
+        localStorage.getItem("probe_validations") || "[]",
+      );
+
+      validations.unshift({
+        id: Date.now(),
+        language: payload.language,
+        success: validationResult?.passed ?? validationResult?.success ?? false,
+        output:
+          validationResult?.output ?? validationResult?.message ?? "No output",
+        createdAt: new Date().toLocaleString(),
+      });
+
+      localStorage.setItem("probe_validations", JSON.stringify(validations));
     } catch (error: any) {
-      setResult({
+      const failedResult = {
         passed: false,
         message: error?.message || "Validation failed",
+      };
+
+      setResult(failedResult);
+
+      const validations = JSON.parse(
+        localStorage.getItem("probe_validations") || "[]",
+      );
+
+      validations.unshift({
+        id: Date.now(),
+        language: payload.language,
+        success: false,
+        output: failedResult.message,
+        createdAt: new Date().toLocaleString(),
       });
+
+      localStorage.setItem("probe_validations", JSON.stringify(validations));
     } finally {
       setLoading(false);
     }
